@@ -1,13 +1,20 @@
-import requests
+import httpx
+from typing import Dict, Any
 
-def create_invoice_estimate(access_token: str, payload: dict) -> dict:
+async def create_invoice_estimate(headers: Dict[str, str], payload: Dict[str, Any]) -> Dict[str, Any]:
     url = "https://services.leadconnectorhq.com/invoices/estimate"
-    headers = {
+    
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": "2021-07-28"
+        "Version": headers.get("Version", "2021-07-28")
     }
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
-    return response.json()
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=request_headers, json=payload)
+        response.raise_for_status()
+        return response.json()

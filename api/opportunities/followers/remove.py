@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def remove_opportunity_followers(
     opportunity_id: str,
     followers: List[str],
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Remove followers from an opportunity.
@@ -16,26 +16,33 @@ async def remove_opportunity_followers(
     Args:
         opportunity_id: The ID of the opportunity
         followers: List of follower IDs to remove
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
 
     Returns:
         Dictionary containing the API response
 
     Raises:
+        ValueError: If required headers are missing
         Exception: If the API request fails
     """
     url = f"{API_BASE_URL}/opportunities/{opportunity_id}/followers"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.delete(url, headers=headers, json={"followers": followers})
+            response = await client.delete(url, headers=request_headers, json={"followers": followers})
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

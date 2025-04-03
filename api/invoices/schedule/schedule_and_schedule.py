@@ -6,7 +6,7 @@ API_VERSION = "2021-07-28"
 
 async def schedule_invoice(
     schedule_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     alt_id: str,
     alt_type: str = "location",
     live_mode: bool = True,
@@ -17,7 +17,7 @@ async def schedule_invoice(
 
     Args:
         schedule_id: The ID of the schedule
-        access_token: The bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         alt_id: Location ID or company ID based on altType
         alt_type: Alt Type, defaults to "location"
         live_mode: Whether to use live mode, defaults to True
@@ -28,12 +28,19 @@ async def schedule_invoice(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        Exception: If required headers are missing
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/invoices/schedule/{schedule_id}/schedule"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -48,6 +55,6 @@ async def schedule_invoice(
         payload["autoPayment"] = auto_payment
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(url, headers=request_headers, json=payload)
         response.raise_for_status()
         return response.json()

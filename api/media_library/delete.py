@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def delete_media(
-    access_token: str,
+    headers: Dict[str, str],
     media_id: str,
     alt_id: str,
     alt_type: str
@@ -15,7 +15,7 @@ async def delete_media(
     Delete a specific file or folder from the media library.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         media_id: The ID of the media to delete
         alt_id: Location or agency ID
         alt_type: AltType (must be 'location' or 'agency')
@@ -24,11 +24,18 @@ async def delete_media(
         Dictionary containing the deletion response
 
     Raises:
+        ValueError: If required headers are missing
         Exception: If the API request fails
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -43,7 +50,7 @@ async def delete_media(
         async with httpx.AsyncClient() as client:
             response = await client.delete(
                 f"{API_BASE_URL}/medias/{media_id}",
-                headers=headers,
+                headers=request_headers,
                 params=params
             )
             response.raise_for_status()

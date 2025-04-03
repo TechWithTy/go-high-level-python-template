@@ -1,11 +1,12 @@
 from typing import Dict, Any, List
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def set_accounts(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     account_ids: List[str],
     file_path: str,
@@ -16,11 +17,14 @@ async def set_accounts(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/{location_id}/set-accounts"
 
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION)
     }
 
     data = {
@@ -35,7 +39,14 @@ async def set_accounts(
     if user_id:
         data["userId"] = user_id
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=request_headers, json=data)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logging.error(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        raise

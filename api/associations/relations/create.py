@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_relation(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     association_id: str,
     first_record_id: str,
@@ -16,7 +16,7 @@ async def create_relation(
     Create a relation between associated entities in Go High Level.
     
     Args:
-        token: The authorization token
+        headers: Dictionary containing Authorization and Version headers
         location_id: The location ID (Sub Account ID)
         association_id: The ID of the association
         first_record_id: ID of the first record (e.g., contactId)
@@ -27,9 +27,15 @@ async def create_relation(
     """
     url = f"{API_BASE_URL}/associations/relations"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -42,7 +48,7 @@ async def create_relation(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(url, headers=request_headers, json=payload)
         
         if response.status_code != 201:
             logging.error(f"Failed to create relation: {response.text}")

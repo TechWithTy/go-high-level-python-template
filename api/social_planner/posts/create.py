@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_social_media_post(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     account_ids: List[str],
     summary: str,
@@ -26,11 +26,14 @@ async def create_social_media_post(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/{location_id}/posts"
 
-    headers = {
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION),
+        **headers
     }
 
     payload = {
@@ -64,7 +67,7 @@ async def create_social_media_post(
         payload["userId"] = user_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
+        response = await client.post(url, json=payload, headers=request_headers)
 
     response.raise_for_status()
     return response.json()

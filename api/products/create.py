@@ -1,11 +1,12 @@
 from typing import Dict, Any
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_product(
-    access_token: str,
+    headers: Dict[str, str],
     name: str,
     location_id: str,
     product_type: str,
@@ -18,11 +19,14 @@ async def create_product(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/products/"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION)
     }
     
     payload = {
@@ -31,21 +35,25 @@ async def create_product(
         "productType": product_type
     }
     
-    if description:
-        payload["description"] = description
-    if image:
-        payload["image"] = image
-    if statement_descriptor:
-        payload["statementDescriptor"] = statement_descriptor
-    if available_in_store is not None:
-        payload["availableInStore"] = available_in_store
-    if medias:
-        payload["medias"] = medias
-    if variants:
-        payload["variants"] = variants
+    optional_fields = {
+        "description": description,
+        "image": image,
+        "statementDescriptor": statement_descriptor,
+        "availableInStore": available_in_store,
+        "medias": medias,
+        "variants": variants
+    }
     
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
+    payload.update({k: v for k, v in optional_fields.items() if v is not None})
     
-    response.raise_for_status()
-    return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, headers=request_headers)
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        logging.error(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        raise

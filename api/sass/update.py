@@ -6,7 +6,7 @@ API_VERSION = "2021-04-15"
 
 async def update_saas_subscription(
     location_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     subscription_id: str,
     customer_id: str,
     company_id: str
@@ -16,7 +16,7 @@ async def update_saas_subscription(
 
     Args:
         location_id (str): The ID of the location.
-        access_token (str): The access token for authentication.
+        headers (Dict[str, str]): The headers containing the authorization token.
         subscription_id (str): The ID of the subscription to update.
         customer_id (str): The ID of the customer.
         company_id (str): The ID of the company.
@@ -26,11 +26,15 @@ async def update_saas_subscription(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails.
+        ValueError: If the Authorization header is missing or invalid.
     """
     url = f"{API_BASE_URL}/saas-api/public-api/update-saas-subscription/{location_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
         "Version": API_VERSION,
         "channel": "OAUTH",
@@ -44,6 +48,6 @@ async def update_saas_subscription(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=data)
+        response = await client.put(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

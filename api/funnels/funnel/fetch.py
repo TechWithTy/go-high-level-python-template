@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def fetch_funnels(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     category: Optional[str] = None,
     limit: Optional[int] = None,
@@ -19,7 +19,7 @@ async def fetch_funnels(
     Fetch a list of funnels based on the given query parameters.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: The ID of the location
         category: Optional category filter
         limit: Optional limit for the number of results
@@ -32,11 +32,17 @@ async def fetch_funnels(
         A dictionary containing the list of funnels and metadata
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -56,7 +62,7 @@ async def fetch_funnels(
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{API_BASE_URL}/funnels/funnel/list",
-                headers=headers,
+                headers=request_headers,
                 params=params
             )
         response.raise_for_status()

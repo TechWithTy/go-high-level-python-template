@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def update_task(
     contact_id: str,
     task_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     title: Optional[str] = None,
     body: Optional[str] = None,
     due_date: Optional[str] = None,
@@ -21,7 +21,7 @@ async def update_task(
     Args:
         contact_id: ID of the contact
         task_id: ID of the task to update
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing request headers
         title: Optional new title of the task
         body: Optional new body/description of the task
         due_date: Optional new due date in ISO format (e.g. "2020-10-25T11:00:00Z")
@@ -31,11 +31,13 @@ async def update_task(
     Returns:
         Dict containing the updated task data
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
-        "Content-Type": "application/json"
-    }
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if "Version" not in headers:
+        headers["Version"] = API_VERSION
+
+    headers["Content-Type"] = "application/json"
     
     payload = {}
     if title is not None:

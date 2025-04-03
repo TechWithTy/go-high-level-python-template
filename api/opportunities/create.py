@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_opportunity(
-    access_token: str,
+    headers: Dict[str, str],
     pipeline_id: str,
     location_id: str,
     name: str,
@@ -21,7 +21,7 @@ async def create_opportunity(
     Create an opportunity in Go High Level.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         pipeline_id: The ID of the pipeline
         location_id: The ID of the location
         name: The name of the opportunity
@@ -36,11 +36,17 @@ async def create_opportunity(
         Dictionary containing the created opportunity data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -66,7 +72,7 @@ async def create_opportunity(
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{API_BASE_URL}/opportunities/",
-                headers=headers,
+                headers=request_headers,
                 json=data
             )
         response.raise_for_status()

@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def update_task_to_complete(
     contact_id: str,
     task_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     completed: bool = True
 ) -> Dict[str, Any]:
     """
@@ -17,15 +17,21 @@ async def update_task_to_complete(
     Args:
         contact_id: ID of the contact
         task_id: ID of the task to update
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         completed: Whether the task is completed (defaults to True)
         
     Returns:
         Dict containing the updated task data
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -39,7 +45,7 @@ async def update_task_to_complete(
             response = await client.put(
                 f"{API_BASE_URL}/contacts/{contact_id}/tasks/{task_id}/completed",
                 json=payload,
-                headers=headers
+                headers=request_headers
             )
             response.raise_for_status()
             return response.json()

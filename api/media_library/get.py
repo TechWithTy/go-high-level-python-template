@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_media_files(
-    access_token: str,
+    headers: Dict[str, str],
     alt_id: str,
     alt_type: str,
     sort_by: str,
@@ -21,7 +21,7 @@ async def get_media_files(
     Fetch list of files and folders from the media library.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         alt_id: Location or agency ID
         alt_type: AltType (must be 'location' or 'agency')
         sort_by: Field to sort the file listing by
@@ -36,13 +36,15 @@ async def get_media_files(
         Dictionary containing the media files data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
-        "Accept": "application/json"
-    }
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    headers["Accept"] = "application/json"
 
     params = {
         "altId": alt_id,

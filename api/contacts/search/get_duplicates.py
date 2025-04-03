@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_duplicate_contact(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     email: Optional[str] = None,
     number: Optional[str] = None
@@ -19,7 +19,7 @@ async def get_duplicate_contact(
     for search is email and the second priority will be phone.
     
     Args:
-        token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: The ID of the location
         email: Contact email (optional)
         number: Contact phone number (optional)
@@ -29,11 +29,13 @@ async def get_duplicate_contact(
     """
     url = f"{API_BASE_URL}/contacts/search/duplicate"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
-        "Accept": "application/json"
-    }
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    headers["Accept"] = "application/json"
     
     params = {
         "locationId": location_id

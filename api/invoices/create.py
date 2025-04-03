@@ -1,10 +1,8 @@
-import requests
-import json
+import httpx
 from typing import Dict, List, Any, Optional
 
-
-def create_invoice(
-    access_token: str,
+async def create_invoice(
+    headers: Dict[str, str],
     alt_id: str,
     name: str,
     contact_id: str,
@@ -34,7 +32,7 @@ def create_invoice(
     Create an invoice using GoHighLevel API
     
     Args:
-        access_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         alt_id: Location ID or company ID
         name: Invoice name
         contact_id: Contact ID
@@ -65,21 +63,22 @@ def create_invoice(
     """
     url = "https://services.leadconnectorhq.com/invoices/"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": "2021-07-28",
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = "2021-07-28"
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
     
-    # Prepare minimal required contact details
     if contact_details is None:
-        contact_details = {
-            "id": contact_id,
-            "name": contact_name
-        }
+        contact_details = {"id": contact_id, "name": contact_name}
     
-    # Prepare minimal required payload
     payload = {
         "altId": alt_id,
         "altType": alt_type,
@@ -92,33 +91,25 @@ def create_invoice(
         "liveMode": live_mode
     }
     
-    # Add optional fields if provided
-    if business_details:
-        payload["businessDetails"] = business_details
-    if discount:
-        payload["discount"] = discount
-    if terms_notes:
-        payload["termsNotes"] = terms_notes
-    if invoice_number:
-        payload["invoiceNumber"] = invoice_number
-    if due_date:
-        payload["dueDate"] = due_date
-    if sent_to:
-        payload["sentTo"] = sent_to
-    if automatic_taxes_enabled:
-        payload["automaticTaxesEnabled"] = automatic_taxes_enabled
-    if payment_schedule:
-        payload["paymentSchedule"] = payment_schedule
-    if late_fees_config:
-        payload["lateFeesConfiguration"] = late_fees_config
-    if tips_config:
-        payload["tipsConfiguration"] = tips_config
-    if invoice_number_prefix:
-        payload["invoiceNumberPrefix"] = invoice_number_prefix
-    if payment_methods:
-        payload["paymentMethods"] = payment_methods
-    if attachments:
-        payload["attachments"] = attachments
+    optional_fields = {
+        "businessDetails": business_details,
+        "discount": discount,
+        "termsNotes": terms_notes,
+        "invoiceNumber": invoice_number,
+        "dueDate": due_date,
+        "sentTo": sent_to,
+        "automaticTaxesEnabled": automatic_taxes_enabled,
+        "paymentSchedule": payment_schedule,
+        "lateFeesConfiguration": late_fees_config,
+        "tipsConfiguration": tips_config,
+        "invoiceNumberPrefix": invoice_number_prefix,
+        "paymentMethods": payment_methods,
+        "attachments": attachments
+    }
     
-    response = requests.post(url, headers=headers, json=payload)
-    return response.json()
+    payload.update({k: v for k, v in optional_fields.items() if v is not None})
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=request_headers, json=payload)
+        response.raise_for_status()
+        return response.json()

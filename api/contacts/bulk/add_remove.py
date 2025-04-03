@@ -9,7 +9,7 @@ async def bulk_update_contacts_business(
     location_id: str,
     contact_ids: List[str],
     business_id: str,
-    auth_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Add or remove contacts from a business in Go High Level.
@@ -18,14 +18,17 @@ async def bulk_update_contacts_business(
         location_id: The ID of the location
         contact_ids: List of contact IDs to add/remove
         business_id: The ID of the business to add contacts to (or None to remove)
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         
     Returns:
         Dictionary containing success status and processed IDs
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -41,7 +44,7 @@ async def bulk_update_contacts_business(
             response = await client.post(
                 f"{API_BASE_URL}/contacts/bulk/business",
                 json=payload,
-                headers=headers
+                headers=request_headers
             )
             response.raise_for_status()
             return response.json()

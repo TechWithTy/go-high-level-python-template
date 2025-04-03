@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def update_association_by_id(
-    token: str,
+    headers: Dict[str, str],
     association_id: str,
     first_object_label: str,
     second_object_label: str
@@ -15,7 +15,7 @@ async def update_association_by_id(
     Update association labels in Go High Level.
     
     Args:
-        token: The authorization token
+        headers: Dictionary containing Authorization and Version headers
         association_id: The ID of the association to update
         first_object_label: New label for the first object
         second_object_label: New label for the second object
@@ -25,9 +25,15 @@ async def update_association_by_id(
     """
     url = f"{API_BASE_URL}/associations/{association_id}"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -38,7 +44,7 @@ async def update_association_by_id(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=payload)
+        response = await client.put(url, headers=request_headers, json=payload)
         
         if response.status_code != 200:
             logging.error(f"Failed to update association: {response.text}")

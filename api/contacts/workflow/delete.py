@@ -26,25 +26,24 @@ async def delete_contact_from_workflow(
     Raises:
         Exception: If the API request fails or if required headers are missing
     """
-    # Validate required headers
-    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+    # Validate and extract auth token
+    auth_token = headers.get("Authorization", "")
+    if not auth_token.startswith("Bearer "):
         raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    auth_token = auth_token.split("Bearer ")[1]
 
-    if not headers.get("Version"):
-        # Set default version if not provided
-        headers["Version"] = API_VERSION
+    # Set default version if not provided
+    version = headers.get("Version", API_VERSION)
     
     # Prepare request headers
     request_headers = {
-        "Authorization": headers["Authorization"],
-        "Version": headers["Version"],
+        "Authorization": f"Bearer {auth_token}",
+        "Version": version,
         "Accept": "application/json"
     }
     
     # Prepare request body if event_start_time is provided
-    request_body = None
-    if event_start_time:
-        request_body = {"eventStartTime": event_start_time}
+    request_body = {"eventStartTime": event_start_time} if event_start_time else None
     
     logging.info(f"Making request to delete contact {contact_id} from workflow {workflow_id}")
     

@@ -9,7 +9,7 @@ async def delete_product_price(
     product_id: str,
     price_id: str,
     location_id: str,
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, bool]:
     """
     Delete a specific price associated with a particular product.
@@ -18,19 +18,25 @@ async def delete_product_price(
         product_id: ID of the product
         price_id: ID of the price to delete
         location_id: ID of the location
-        access_token: Access token for authentication
+        headers: Dictionary containing Authorization and Version headers
 
     Returns:
         Dictionary containing the deletion status
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
     url = f"{API_BASE_URL}/products/{product_id}/price/{price_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -40,7 +46,7 @@ async def delete_product_price(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.delete(url, headers=headers, params=params)
+            response = await client.delete(url, headers=request_headers, params=params)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

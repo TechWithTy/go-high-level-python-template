@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def get_contacts_by_business_id(
     business_id: str,
     location_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     limit: int = 25,
     query: Optional[str] = None,
     skip: int = 0
@@ -19,7 +19,7 @@ async def get_contacts_by_business_id(
     Args:
         business_id: The ID of the business
         location_id: The ID of the location
-        auth_token: Authorization token
+        headers: Dictionary containing Authorization and Version headers
         limit: Maximum number of results to return (default: 25)
         query: Optional search query for contact name
         skip: Number of results to skip (default: 0)
@@ -27,9 +27,15 @@ async def get_contacts_by_business_id(
     Returns:
         Dict containing contacts and count
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
     
@@ -46,7 +52,7 @@ async def get_contacts_by_business_id(
     
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params)
+            response = await client.get(url, headers=request_headers, params=params)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

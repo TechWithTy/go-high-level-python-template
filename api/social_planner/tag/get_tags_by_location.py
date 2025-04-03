@@ -1,11 +1,12 @@
 from typing import Dict, Any, Optional
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_tags_by_location(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     limit: Optional[int] = None,
     search_text: Optional[str] = None,
@@ -13,9 +14,12 @@ async def get_tags_by_location(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/{location_id}/tags"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
 
@@ -27,7 +31,14 @@ async def get_tags_by_location(
     if skip:
         params["skip"] = str(skip)
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=request_headers, params=params)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logging.error(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        raise

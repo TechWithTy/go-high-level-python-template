@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def add_contact_to_campaign(
     contact_id: str,
     campaign_id: str,
-    auth_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Add a contact to a campaign in Go High Level.
@@ -16,14 +16,17 @@ async def add_contact_to_campaign(
     Args:
         contact_id: The ID of the contact to add to the campaign
         campaign_id: The ID of the campaign to add the contact to
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing request headers including Authorization
         
     Returns:
         Dictionary containing the response data
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -33,7 +36,7 @@ async def add_contact_to_campaign(
             response = await client.post(
                 f"{API_BASE_URL}/contacts/{contact_id}/campaigns/{campaign_id}",
                 json={},
-                headers=headers
+                headers=request_headers
             )
             response.raise_for_status()
             return response.json()

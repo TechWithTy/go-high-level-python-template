@@ -1,12 +1,13 @@
 from typing import Dict, Any, Optional
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_templates(
     location_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     origin_id: str,
     deleted: bool = False,
     limit: int = 25,
@@ -15,9 +16,12 @@ async def get_templates(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/locations/{location_id}/templates"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
 
@@ -31,7 +35,14 @@ async def get_templates(
     if template_type:
         params["type"] = template_type
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=request_headers, params=params)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logging.error(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        raise

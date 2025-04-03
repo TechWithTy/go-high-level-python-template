@@ -1,15 +1,19 @@
-import requests
+import httpx
 
-def update_estimate_template(access_token, template_id, payload):
+async def update_estimate_template(headers: dict, template_id: str, payload: dict):
     url = f"https://services.leadconnectorhq.com/invoices/estimate/template/{template_id}"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": "2021-07-28"
+        "Version": headers.get("Version", "2021-07-28")
     }
     
-    response = requests.put(url, headers=headers, json=payload)
-    
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, headers=request_headers, json=payload)
+        response.raise_for_status()
+        return response.json()

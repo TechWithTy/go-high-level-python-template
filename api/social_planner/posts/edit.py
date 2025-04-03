@@ -1,14 +1,20 @@
-import requests
+from typing import Dict, Any
+import httpx
 
-def edit_post(access_token, location_id, post_id, payload):
-    url = f"https://services.leadconnectorhq.com/social-media-posting/{location_id}/posts/{post_id}"
+API_BASE_URL = "https://services.leadconnectorhq.com"
+API_VERSION = "2021-07-28"
+
+async def edit_post(headers: Dict[str, str], location_id: str, post_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    url = f"{API_BASE_URL}/social-media-posting/{location_id}/posts/{post_id}"
     
-    headers = {
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers.get("Authorization", ""),
         "Content-Type": "application/json",
-        "Version": "2021-07-28"
+        "Version": API_VERSION
     }
     
-    response = requests.put(url, headers=headers, json=payload)
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, headers=request_headers, json=payload)
+        response.raise_for_status()
+        return response.json()

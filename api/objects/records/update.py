@@ -10,7 +10,7 @@ async def update_record(
     record_id: str,
     properties: Dict[str, Any],
     location_id: str,
-    token: str,
+    headers: Dict[str, str],
     owner: Optional[List[str]] = None,
     followers: Optional[List[str]] = None
 ) -> Dict[str, Any]:
@@ -22,7 +22,7 @@ async def update_record(
         record_id: ID of the record to be updated
         properties: Properties of the record to update
         location_id: Location ID
-        token: Access Token
+        headers: Dictionary containing Authorization and Version headers
         owner: Owner (User's id). Limited to 1 for now. Only supported with custom objects
         followers: Follower (User's ids). Limited to 10 for now
         
@@ -31,30 +31,27 @@ async def update_record(
     """
     url = f"{API_BASE_URL}/objects/{schema_key}/records/{record_id}"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
     
-    params = {
-        "locationId": location_id
-    }
+    params = {"locationId": location_id}
     
-    payload = {
-        "properties": properties
-    }
-    
+    payload = {"properties": properties}
     if owner:
         payload["owner"] = owner
-        
     if followers:
         payload["followers"] = followers
     
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.put(url, headers=headers, params=params, json=payload)
+            response = await client.put(url, headers=request_headers, params=params, json=payload)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

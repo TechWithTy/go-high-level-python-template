@@ -1,17 +1,26 @@
-import requests
+from typing import Dict, Any
+import httpx
 
-def create_user(access_token):
-    url = "https://services.leadconnectorhq.com/users/"
-    headers = {
+API_BASE_URL = "https://services.leadconnectorhq.com"
+API_VERSION = "2021-07-28"
+
+async def create_user(headers: Dict[str, str]) -> Dict[str, Any]:
+    url = f"{API_BASE_URL}/users/"
+    
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": "2021-07-28"
+        "Version": API_VERSION
     }
 
-    response = requests.post(url, headers=headers)
-    
-    if response.status_code == 201:
-        return response.json()
-    else:
-        return f"Error: {response.status_code}, {response.text}"
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=request_headers)
+        
+        if response.status_code == 201:
+            return response.json()
+        else:
+            raise httpx.HTTPStatusError(f"Error: {response.status_code}", request=response.request, response=response)

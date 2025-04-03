@@ -4,12 +4,12 @@ import httpx
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
-async def disconnect_custom_provider(access_token: str, location_id: str, live_mode: bool) -> Dict[str, Any]:
+async def disconnect_custom_provider(headers: Dict[str, str], location_id: str, live_mode: bool) -> Dict[str, Any]:
     """
     Disconnect an existing payment config for a given location.
 
     Args:
-        access_token (str): The access token for authentication.
+        headers (Dict[str, str]): The headers containing the authorization token.
         location_id (str): The ID of the location.
         live_mode (bool): Whether the config is for test mode or live mode.
 
@@ -18,11 +18,15 @@ async def disconnect_custom_provider(access_token: str, location_id: str, live_m
 
     Raises:
         httpx.HTTPStatusError: If the API request fails.
+        ValueError: If the Authorization header is missing or invalid.
     """
     url = f"{API_BASE_URL}/payments/custom-provider/disconnect"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
         "Version": API_VERSION,
         "Accept": "application/json",
         "Content-Type": "application/json"
@@ -37,6 +41,6 @@ async def disconnect_custom_provider(access_token: str, location_id: str, live_m
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, params=params, json=data)
+        response = await client.post(url, headers=request_headers, params=params, json=data)
         response.raise_for_status()
         return response.json()

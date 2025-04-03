@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_custom_fields(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     model: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -14,7 +14,7 @@ async def get_custom_fields(
     Get Custom Fields for a location in Go High Level.
 
     Args:
-        token: Access Token
+        headers: Dictionary containing Authorization and Version headers
         location_id: Location Id
         model: Model of the custom field to retrieve (optional)
 
@@ -22,23 +22,24 @@ async def get_custom_fields(
         Dictionary containing the custom fields data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
     url = f"{API_BASE_URL}/locations/{location_id}/customFields"
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
 
-    params = {}
-    if model:
-        params["model"] = model
+    params = {"model": model} if model else {}
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params)
+            response = await client.get(url, headers=request_headers, params=params)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

@@ -5,15 +5,18 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def start_tiktok_oauth(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     user_id: str,
     page: str = "integration",
     reconnect: str = "true"
 ) -> Dict[str, Any]:
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
 
@@ -27,6 +30,6 @@ async def start_tiktok_oauth(
     url = f"{API_BASE_URL}/social-media-posting/oauth/tiktok/start"
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

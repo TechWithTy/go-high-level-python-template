@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def list_estimate_templates(
-    access_token: str,
+    headers: Dict[str, str],
     alt_id: str,
     alt_type: str = "location",
     limit: int = 10,
@@ -14,10 +14,13 @@ async def list_estimate_templates(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/invoices/estimate/template"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION)
     }
     
     params = {
@@ -31,6 +34,6 @@ async def list_estimate_templates(
         params["search"] = search
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

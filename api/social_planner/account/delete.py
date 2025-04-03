@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def delete_social_media_account(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     account_id: str,
     company_id: Optional[str] = None,
@@ -15,7 +15,7 @@ async def delete_social_media_account(
     Delete a social media account and remove it from the group.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: The ID of the location
         account_id: The ID of the account to delete
         company_id: Optional company ID
@@ -26,12 +26,16 @@ async def delete_social_media_account(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        Exception: If required headers are missing
     """
     url = f"{API_BASE_URL}/social-media-posting/{location_id}/accounts/{account_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
 
@@ -42,6 +46,6 @@ async def delete_social_media_account(
         params["userId"] = user_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.delete(url, headers=headers, params=params)
+        response = await client.delete(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def upsert_contact(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
@@ -39,9 +39,15 @@ async def upsert_contact(
     """
     url = f"{API_BASE_URL}/contacts/upsert"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -50,53 +56,35 @@ async def upsert_contact(
         "locationId": location_id
     }
     
-    # Add optional fields to payload
-    if first_name:
-        payload["firstName"] = first_name
-    if last_name:
-        payload["lastName"] = last_name
-    if name:
-        payload["name"] = name
-    if email:
-        payload["email"] = email
-    if gender:
-        payload["gender"] = gender
-    if phone:
-        payload["phone"] = phone
-    if address1:
-        payload["address1"] = address1
-    if city:
-        payload["city"] = city
-    if state:
-        payload["state"] = state
-    if postal_code:
-        payload["postalCode"] = postal_code
-    if website:
-        payload["website"] = website
-    if timezone:
-        payload["timezone"] = timezone
-    if dnd is not None:
-        payload["dnd"] = dnd
-    if dnd_settings:
-        payload["dndSettings"] = dnd_settings
-    if inbound_dnd_settings:
-        payload["inboundDndSettings"] = inbound_dnd_settings
-    if tags:
-        payload["tags"] = tags
-    if custom_fields:
-        payload["customFields"] = custom_fields
-    if source:
-        payload["source"] = source
-    if country:
-        payload["country"] = country
-    if company_name:
-        payload["companyName"] = company_name
-    if assigned_to:
-        payload["assignedTo"] = assigned_to
+    optional_fields = {
+        "firstName": first_name,
+        "lastName": last_name,
+        "name": name,
+        "email": email,
+        "gender": gender,
+        "phone": phone,
+        "address1": address1,
+        "city": city,
+        "state": state,
+        "postalCode": postal_code,
+        "website": website,
+        "timezone": timezone,
+        "dnd": dnd,
+        "dndSettings": dnd_settings,
+        "inboundDndSettings": inbound_dnd_settings,
+        "tags": tags,
+        "customFields": custom_fields,
+        "source": source,
+        "country": country,
+        "companyName": company_name,
+        "assignedTo": assigned_to
+    }
+    
+    payload.update({k: v for k, v in optional_fields.items() if v is not None})
     
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload)
+            response = await client.post(url, headers=request_headers, json=payload)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

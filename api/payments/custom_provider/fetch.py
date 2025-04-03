@@ -4,12 +4,12 @@ import httpx
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
-async def fetch_custom_provider(access_token: str, location_id: str) -> Dict[str, Any]:
+async def fetch_custom_provider(headers: Dict[str, str], location_id: str) -> Dict[str, Any]:
     """
     Fetch an existing payment config for a given location.
 
     Args:
-        access_token (str): The access token for authentication.
+        headers (Dict[str, str]): The headers containing the authorization token.
         location_id (str): The ID of the location.
 
     Returns:
@@ -17,11 +17,15 @@ async def fetch_custom_provider(access_token: str, location_id: str) -> Dict[str
 
     Raises:
         httpx.HTTPStatusError: If the API request fails.
+        ValueError: If the Authorization header is missing or invalid.
     """
     url = f"{API_BASE_URL}/payments/custom-provider/connect"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
         "Version": API_VERSION,
         "Accept": "application/json"
     }
@@ -31,6 +35,6 @@ async def fetch_custom_provider(access_token: str, location_id: str) -> Dict[str
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

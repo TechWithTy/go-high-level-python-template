@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_blog_posts_by_id(
-    access_token: str,
+    headers: Dict[str, str],
     blog_id: str,
     location_id: str,
     limit: int,
@@ -18,7 +18,7 @@ async def get_blog_posts_by_id(
     Get blog posts by Blog ID from the Go High Level API.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         blog_id: The ID of the blog
         location_id: The ID of the location
         limit: Maximum number of posts to return
@@ -30,11 +30,17 @@ async def get_blog_posts_by_id(
         Dictionary containing the blog posts data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -54,7 +60,7 @@ async def get_blog_posts_by_id(
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(
                 f"{API_BASE_URL}/blogs/posts/all",
-                headers=headers,
+                headers=request_headers,
                 params=params
             )
 

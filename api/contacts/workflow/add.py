@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def add_contact_to_workflow(
     contact_id: str,
     workflow_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     event_start_time: Optional[str] = None
 ) -> Dict[str, Any]:
     """
@@ -17,15 +17,24 @@ async def add_contact_to_workflow(
     Args:
         contact_id: ID of the contact
         workflow_id: ID of the workflow
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         event_start_time: Optional start time for the workflow event in ISO format (e.g. "2021-06-23T03:30:00+01:00")
-        
+    
     Returns:
         Dict containing the API response
+    
+    Raises:
+        ValueError: If required headers are missing or invalid
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -39,7 +48,7 @@ async def add_contact_to_workflow(
             response = await client.post(
                 f"{API_BASE_URL}/contacts/{contact_id}/workflow/{workflow_id}",
                 json=payload,
-                headers=headers
+                headers=request_headers
             )
             response.raise_for_status()
             return response.json()

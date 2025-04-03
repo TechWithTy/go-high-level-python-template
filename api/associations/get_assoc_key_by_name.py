@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_association_key_by_name(
-    token: str,
+    headers: Dict[str, str],
     key_name: str,
     location_id: str
 ) -> Dict[str, Any]:
@@ -14,7 +14,7 @@ async def get_association_key_by_name(
     Get association key by name from Go High Level API.
     
     Args:
-        token: The authorization token
+        headers: Dictionary containing Authorization and Version headers
         key_name: The name of the association key
         location_id: The location ID
         
@@ -23,9 +23,12 @@ async def get_association_key_by_name(
     """
     url = f"{API_BASE_URL}/associations/key/{key_name}"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json"
     }
     
@@ -34,7 +37,7 @@ async def get_association_key_by_name(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         
         if response.status_code != 200:
             logging.error(f"Failed to get association key by name: {response.text}")

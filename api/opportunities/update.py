@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def update_opportunity(
-    access_token: str,
+    headers: Dict[str, str],
     opportunity_id: str,
     pipeline_id: Optional[str] = None,
     name: Optional[str] = None,
@@ -18,9 +18,12 @@ async def update_opportunity(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/opportunities/{opportunity_id}"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -42,7 +45,7 @@ async def update_opportunity(
         payload["customFields"] = custom_fields
     
     async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=payload)
+        response = await client.put(url, headers=request_headers, json=payload)
     
     response.raise_for_status()
     return response.json()

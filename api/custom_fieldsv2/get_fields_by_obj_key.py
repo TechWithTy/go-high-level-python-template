@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import httpx
 import logging
 
@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_fields_by_obj_key(
-    token: str,
+    headers: Dict[str, str],
     object_key: str,
     location_id: str
 ) -> Dict[str, Any]:
@@ -16,7 +16,7 @@ async def get_fields_by_obj_key(
     Only supports Custom Objects and Company (Business) today.
     
     Args:
-        token: The authorization token
+        headers: Dictionary containing Authorization and Version headers
         object_key: Key of the Object (must include "custom_objects." prefix for custom objects)
         location_id: Location ID
         
@@ -24,13 +24,19 @@ async def get_fields_by_obj_key(
         Dictionary containing custom fields data for the object
         
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/custom-fields/object-key/{object_key}"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
     
@@ -39,7 +45,7 @@ async def get_fields_by_obj_key(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         
         if response.status_code != 200:
             logging.error(f"Failed to get custom fields: {response.text}")

@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def upsert_opportunity(
-    access_token: str,
+    headers: Dict[str, str],
     pipeline_id: str,
     location_id: str,
     contact_id: str,
@@ -20,7 +20,7 @@ async def upsert_opportunity(
     Upsert an opportunity in Go High Level API.
 
     Args:
-        access_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         pipeline_id: ID of the pipeline
         location_id: ID of the location
         contact_id: ID of the contact
@@ -34,11 +34,17 @@ async def upsert_opportunity(
         Dictionary containing the upserted opportunity data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -58,7 +64,7 @@ async def upsert_opportunity(
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{API_BASE_URL}/opportunities/upsert",
-                headers=headers,
+                headers=request_headers,
                 json=data
             )
         response.raise_for_status()

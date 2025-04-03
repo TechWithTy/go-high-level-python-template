@@ -6,7 +6,7 @@ API_VERSION = "2021-07-28"
 
 async def update_estimate(
     estimate_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
@@ -14,7 +14,7 @@ async def update_estimate(
 
     Args:
         estimate_id: The ID of the estimate to update
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         data: The estimate data to update
 
     Returns:
@@ -22,17 +22,24 @@ async def update_estimate(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        Exception: If required headers are missing
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/invoices/estimate/{estimate_id}"
 
-    headers = {
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers["Version"]
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=data)
+        response = await client.put(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

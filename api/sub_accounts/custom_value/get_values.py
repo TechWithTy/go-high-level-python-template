@@ -5,31 +5,34 @@ import logging
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
-async def get_custom_values(location_id: str, access_token: str) -> Dict[str, Any]:
+async def get_custom_values(location_id: str, headers: Dict[str, str]) -> Dict[str, Any]:
     """
     Get Custom Values for a location in Go High Level.
 
     Args:
         location_id: The ID of the location
-        access_token: The access token for authentication
+        headers: Dictionary containing request headers including Authorization
 
     Returns:
         Dictionary containing the custom values data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
+    if not headers.get("Authorization"):
+        raise Exception("Missing Authorization header")
+
     url = f"{API_BASE_URL}/locations/{location_id}/customValues"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    request_headers = {
         "Version": API_VERSION,
-        "Accept": "application/json"
+        "Accept": "application/json",
+        **headers
     }
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
+            response = await client.get(url, headers=request_headers)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_redirect(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     domain: str,
     path: str,
@@ -16,7 +16,7 @@ async def create_redirect(
     Create a new URL redirect in the system.
 
     Args:
-        token: Access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: Identifier of the location associated with the redirect
         domain: Domain where the redirect occurs
         path: Original path that will be redirected
@@ -28,12 +28,19 @@ async def create_redirect(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        Exception: If required headers are missing
     """
     url = f"{API_BASE_URL}/funnels/lookup/redirect"
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -47,6 +54,6 @@ async def create_redirect(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=data)
+        response = await client.post(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

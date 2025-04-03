@@ -1,20 +1,21 @@
 import requests
 import json
 
-def create_send_invoice(access_token, invoice_data):
+def create_send_invoice(headers, invoice_data):
     url = "https://services.leadconnectorhq.com/invoices/text2pay"
-    headers = {
+    headers.update({
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Version": "2021-07-28"
-    }
+    })
     
     response = requests.post(url, headers=headers, json=invoice_data)
     return response.json()
 
 # Example usage
-access_token = "your_access_token_here"
+headers = {
+    "Authorization": "Bearer your_access_token_here"
+}
 invoice_data = {
     "altId": "6578278e879ad2646715ba9c",
     "altType": "location",
@@ -48,5 +49,5 @@ invoice_data = {
     # ... (rest of the invoice data)
 }
 
-result = create_send_invoice(access_token, invoice_data)
+result = create_send_invoice(headers, invoice_data)
 print(json.dumps(result, indent=2))

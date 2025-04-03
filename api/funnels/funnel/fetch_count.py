@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def fetch_funnel_page_count(
-    access_token: str,
+    headers: Dict[str, str],
     funnel_id: str,
     location_id: str,
     name: Optional[str] = None
@@ -14,7 +14,7 @@ async def fetch_funnel_page_count(
     Fetch count of funnel pages.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         funnel_id: The ID of the funnel
         location_id: The ID of the location
         name: Optional name parameter for filtering
@@ -24,14 +24,17 @@ async def fetch_funnel_page_count(
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        ValueError: If required headers are missing
     """
     url = f"{API_BASE_URL}/funnels/page/count"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
-        "Accept": "application/json"
-    }
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    if "Version" not in headers:
+        headers["Version"] = API_VERSION
+
+    headers["Accept"] = "application/json"
 
     params = {
         "funnelId": funnel_id,

@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def check_url_slug(
-    token: str,
+    headers: Dict[str, str],
     location_id: str,
     url_slug: str,
     post_id: Optional[str] = None
@@ -15,7 +15,7 @@ async def check_url_slug(
     Check if a blog post URL slug exists.
 
     Args:
-        token: Access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: ID of the location
         url_slug: URL slug to check
         post_id: Optional post ID
@@ -24,13 +24,19 @@ async def check_url_slug(
         Dictionary containing the API response
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/blogs/posts/url-slug-exists"
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -44,7 +50,7 @@ async def check_url_slug(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params)
+            response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

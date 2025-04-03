@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional, List
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
@@ -8,7 +9,7 @@ async def create_custom_field(
     location_id: str,
     name: str,
     data_type: str,
-    access_token: str,
+    headers: Dict[str, str],
     placeholder: Optional[str] = None,
     accepted_format: Optional[List[str]] = None,
     is_multiple_file: Optional[bool] = None,
@@ -19,9 +20,12 @@ async def create_custom_field(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/locations/{location_id}/customFields"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -46,7 +50,14 @@ async def create_custom_field(
     if model:
         payload["model"] = model
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=request_headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logging.error(f"HTTP error occurred: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        raise

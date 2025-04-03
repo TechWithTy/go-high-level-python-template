@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_custom_menu(
-    access_token: str,
+    headers: Dict[str, str],
     title: str,
     url: str,
     icon_name: str,
@@ -19,11 +19,14 @@ async def create_custom_menu(
     allow_camera: bool = False,
     allow_microphone: bool = False
 ) -> Dict[str, Any]:
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION)
     }
 
     data = {
@@ -44,6 +47,6 @@ async def create_custom_menu(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{API_BASE_URL}/custom-menus/", headers=headers, json=data)
+        response = await client.post(f"{API_BASE_URL}/custom-menus/", headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

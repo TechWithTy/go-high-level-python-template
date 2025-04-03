@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_upload_status(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     include_users: Optional[bool] = None,
     limit: int = 10,
@@ -14,10 +14,13 @@ async def get_upload_status(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/{location_id}/csv"
 
-    headers = {
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Invalid or missing Authorization header")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION)
     }
 
     params = {
@@ -31,6 +34,6 @@ async def get_upload_status(
         params["userId"] = user_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

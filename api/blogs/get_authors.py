@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import httpx
 import logging
 
@@ -7,7 +7,7 @@ API_VERSION = "2021-07-28"
 
 async def get_authors(
     location_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     limit: int = 5,
     offset: int = 0
 ) -> Dict[str, Any]:
@@ -16,7 +16,7 @@ async def get_authors(
 
     Args:
         location_id: The ID of the location
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         limit: Number of authors to show in the listing (default: 5)
         offset: Number of authors to skip in listing (default: 0)
 
@@ -24,11 +24,17 @@ async def get_authors(
         Dictionary containing the authors data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -42,7 +48,7 @@ async def get_authors(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params)
+            response = await client.get(url, headers=request_headers, params=params)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:

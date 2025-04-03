@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_blog_post(
-    access_token: str,
+    headers: Dict[str, str],
     title: str,
     location_id: str,
     blog_id: str,
@@ -23,11 +23,14 @@ async def create_blog_post(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/blogs/posts"
     
-    headers = {
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Invalid or missing Authorization header")
+    
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION),
+        "Authorization": headers["Authorization"]
     }
     
     payload = {
@@ -48,7 +51,7 @@ async def create_blog_post(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
+        response = await client.post(url, json=payload, headers=request_headers)
     
     response.raise_for_status()
     return response.json()

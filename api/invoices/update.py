@@ -1,21 +1,32 @@
-import requests
-import json
+import httpx
+from typing import Dict, Any
 
-def update_invoice(invoice_id, access_token, data):
-    url = f"https://services.leadconnectorhq.com/invoices/{invoice_id}"
-    headers = {
+API_BASE_URL = "https://services.leadconnectorhq.com"
+API_VERSION = "2021-07-28"
+
+async def update_invoice(headers: Dict[str, str], invoice_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    url = f"{API_BASE_URL}/invoices/{invoice_id}"
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": "2021-07-28"
+        "Version": headers.get("Version", API_VERSION)
     }
     
-    response = requests.put(url, headers=headers, json=data)
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, headers=request_headers, json=data)
+        response.raise_for_status()
+        return response.json()
 
 # Example usage
 invoice_id = "6578278e879ad2646715ba9c"
-access_token = "your_access_token_here"
+headers = {
+    "Authorization": "Bearer your_access_token_here",
+    "Version": "2021-07-28"
+}
 
 data = {
     "altId": "6578278e879ad2646715ba9c",
@@ -106,5 +117,10 @@ data = {
     }]
 }
 
-result = update_invoice(invoice_id, access_token, data)
-print(json.dumps(result, indent=2))
+import asyncio
+
+async def main():
+    result = await update_invoice(headers, invoice_id, data)
+    print(result)
+
+asyncio.run(main())

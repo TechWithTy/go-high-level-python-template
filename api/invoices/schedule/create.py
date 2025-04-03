@@ -3,7 +3,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 
 def create_invoice_schedule(
-    access_token: str,
+    headers: Dict[str, str],
     alt_id: str,
     alt_type: str,
     name: str,
@@ -25,10 +25,10 @@ def create_invoice_schedule(
 ) -> Dict:
     url = "https://services.leadconnectorhq.com/invoices/schedule"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": "2021-07-28"
-    }
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Invalid or missing Authorization header")
+    
+    headers.setdefault("Version", "2021-07-28")
     
     payload = {
         "altId": alt_id,
@@ -52,4 +52,5 @@ def create_invoice_schedule(
     }
     
     response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
     return response.json()

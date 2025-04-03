@@ -10,7 +10,7 @@ async def update_contacts_tags(
     contacts: List[str],
     tags: List[str],
     location_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     remove_all_tags: bool = False
 ) -> Dict[str, Any]:
     """
@@ -21,7 +21,7 @@ async def update_contacts_tags(
         contacts: List of contact IDs to process (max 500)
         tags: List of tags to add or remove (max 50)
         location_id: Location ID where the bulk request is executed
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         remove_all_tags: Option to remove all tags (only for 'remove' operation)
         
     Returns:
@@ -29,7 +29,7 @@ async def update_contacts_tags(
         
     Raises:
         ValueError: If invalid operation type is provided
-        Exception: If API request fails
+        Exception: If API request fails or if required headers are missing
     """
     if operation_type not in ["add", "remove"]:
         raise ValueError("Operation type must be either 'add' or 'remove'")
@@ -37,9 +37,15 @@ async def update_contacts_tags(
     if remove_all_tags and operation_type != "remove":
         raise ValueError("remove_all_tags can only be used with 'remove' operation type")
     
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+    
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -59,7 +65,7 @@ async def update_contacts_tags(
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{API_BASE_URL}/contacts/bulk/tags/update/{operation_type}",
-                headers=headers,
+                headers=request_headers,
                 json=payload
             )
             response.raise_for_status()

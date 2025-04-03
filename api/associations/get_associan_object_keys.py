@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_association_by_object_key(
-    token: str,
+    headers: Dict[str, str],
     object_key: str,
     location_id: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -14,7 +14,7 @@ async def get_association_by_object_key(
     Get association by object keys like contacts, custom objects and opportunities.
     
     Args:
-        token: The authorization token
+        headers: The request headers containing the authorization token
         object_key: The object key (e.g., custom_objects.car)
         location_id: Optional location ID
         
@@ -23,11 +23,10 @@ async def get_association_by_object_key(
     """
     url = f"{API_BASE_URL}/associations/objectKey/{object_key}"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
+    headers.update({
         "Version": API_VERSION,
         "Accept": "application/json"
-    }
+    })
     
     params = {}
     if location_id:

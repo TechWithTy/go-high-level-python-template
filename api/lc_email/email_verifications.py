@@ -3,43 +3,41 @@ import logging
 from typing import Dict, Any
 
 async def verify_email(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
-    email: str,
-    version: str = "2021-07-28"
+    email: str
 ) -> Dict[str, Any]:
     """
     Verify an email address using the Go High Level API.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         location_id: The location ID for billing purposes
         email: The email address to verify
-        version: API version (default: "2021-07-28")
 
     Returns:
         Dictionary containing the email verification result
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
     API_BASE_URL = "https://services.leadconnectorhq.com"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": version,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = "2021-07-28"
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
 
-    params = {
-        "locationId": location_id
-    }
-
-    payload = {
-        "type": "email",
-        "verify": email
-    }
+    params = {"locationId": location_id}
+    payload = {"type": "email", "verify": email}
 
     logging.info(f"Verifying email: {email}")
 
@@ -47,7 +45,7 @@ async def verify_email(
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 f"{API_BASE_URL}/email/verify",
-                headers=headers,
+                headers=request_headers,
                 params=params,
                 json=payload
             )

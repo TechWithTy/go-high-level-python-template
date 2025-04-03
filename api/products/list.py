@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def list_products(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     limit: Optional[int] = 0,
     offset: Optional[int] = 0,
@@ -15,7 +15,7 @@ async def list_products(
     Retrieve a paginated list of products.
 
     Args:
-        access_token: The access token for authentication.
+        headers: Dictionary containing Authorization and Version headers.
         location_id: The ID of the sub-account location.
         limit: The maximum number of items per page (default: 0).
         offset: The starting index of the page (default: 0).
@@ -25,13 +25,19 @@ async def list_products(
         A dictionary containing the list of products and total count.
 
     Raises:
-        httpx.HTTPStatusError: If the API request fails.
+        Exception: If the API request fails or if required headers are missing.
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/products/"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json"
     }
 
@@ -45,6 +51,6 @@ async def list_products(
         params["search"] = search
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

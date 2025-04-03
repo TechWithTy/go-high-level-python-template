@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 import httpx
 import logging
 
@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def upload_media_file(
-    access_token: str,
+    headers: Dict[str, str],
     file: Optional[bytes] = None,
     hosted: Optional[bool] = None,
     file_url: Optional[str] = None,
@@ -17,7 +17,7 @@ async def upload_media_file(
     Upload a file to the Media Library.
 
     Args:
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         file: The file to upload (max 25MB)
         hosted: Boolean indicating if the file is hosted externally
         file_url: URL of the hosted file (required if hosted is True)
@@ -28,13 +28,15 @@ async def upload_media_file(
         Dictionary containing the uploaded file data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
-        "Accept": "application/json"
-    }
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    headers["Accept"] = "application/json"
 
     data = {}
     files = {}

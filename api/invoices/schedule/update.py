@@ -1,17 +1,21 @@
-import requests
+import httpx
 from typing import List, Dict, Optional
 from datetime import datetime
 
-def update_schedule(schedule_id: str, access_token: str, alt_id: str, alt_type: str, name: str,
-                    contact_details: Dict, schedule: Dict, live_mode: bool, business_details: Dict,
-                    currency: str, items: List[Dict], discount: Optional[Dict] = None,
-                    terms_notes: Optional[str] = None, title: Optional[str] = None,
-                    attachments: Optional[List[Dict]] = None) -> Dict:
+async def update_schedule(schedule_id: str, headers: Dict[str, str], alt_id: str, alt_type: str, name: str,
+                          contact_details: Dict, schedule: Dict, live_mode: bool, business_details: Dict,
+                          currency: str, items: List[Dict], discount: Optional[Dict] = None,
+                          terms_notes: Optional[str] = None, title: Optional[str] = None,
+                          attachments: Optional[List[Dict]] = None) -> Dict:
     url = f"https://services.leadconnectorhq.com/invoices/schedule/{schedule_id}"
     
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": "2021-07-28"
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", "2021-07-28"),
+        "Accept": "application/json"
     }
     
     payload = {
@@ -35,7 +39,8 @@ def update_schedule(schedule_id: str, access_token: str, alt_id: str, alt_type: 
     if attachments:
         payload["attachments"] = attachments
     
-    response = requests.put(url, headers=headers, json=payload)
-    response.raise_for_status()
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, headers=request_headers, json=payload)
+        response.raise_for_status()
     
     return response.json()

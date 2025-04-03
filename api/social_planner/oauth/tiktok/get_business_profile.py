@@ -4,16 +4,19 @@ import httpx
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
-async def get_tiktok_business_profile(access_token: str, location_id: str, account_id: str) -> Dict[str, Any]:
+async def get_tiktok_business_profile(headers: Dict[str, str], location_id: str, account_id: str) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/oauth/{location_id}/tiktok-business/accounts/{account_id}"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION)
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers)
+        response = await client.get(url, headers=request_headers)
         response.raise_for_status()
         return response.json()

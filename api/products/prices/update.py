@@ -9,7 +9,7 @@ async def update_product_price(
     product_id: str,
     price_id: str,
     price_data: Dict[str, Any],
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Update Price by ID for a Product.
@@ -18,19 +18,22 @@ async def update_product_price(
         product_id: ID of the product
         price_id: ID of the price to update
         price_data: Dictionary containing price details to update
-        access_token: Access token for authentication
+        headers: Dictionary containing Authorization and Version headers
 
     Returns:
         Dictionary containing the updated price data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
     url = f"{API_BASE_URL}/products/{product_id}/price/{price_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -39,7 +42,7 @@ async def update_product_price(
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.put(url, headers=headers, json=price_data)
+            response = await client.put(url, headers=request_headers, json=price_data)
 
         response.raise_for_status()
         return response.json()

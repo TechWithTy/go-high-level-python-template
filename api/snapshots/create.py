@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_snapshot_share_link(
-    access_token: str,
+    headers: Dict[str, str],
     snapshot_id: str,
     share_type: str,
     company_id: str,
@@ -14,9 +14,12 @@ async def create_snapshot_share_link(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/snapshots/share/link"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -34,6 +37,6 @@ async def create_snapshot_share_link(
         data["share_location_id"] = share_location_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, params=params, json=data)
+        response = await client.post(url, headers=request_headers, params=params, json=data)
         response.raise_for_status()
         return response.json()

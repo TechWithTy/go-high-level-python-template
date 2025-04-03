@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def update_custom_value(
     location_id: str,
     custom_value_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     name: str,
     value: str
 ) -> Dict[str, Any]:
@@ -18,7 +18,7 @@ async def update_custom_value(
     Args:
         location_id: The ID of the location
         custom_value_id: The ID of the custom value to update
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         name: The name of the custom field
         value: The value to set for the custom field
 
@@ -26,11 +26,17 @@ async def update_custom_value(
         Dictionary containing the updated custom value data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -44,7 +50,7 @@ async def update_custom_value(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.put(url, headers=headers, json=data)
+            response = await client.put(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

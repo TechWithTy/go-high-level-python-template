@@ -22,7 +22,11 @@ async def generate_estimate_number(
         
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        ValueError: If Authorization header is missing or invalid
     """
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
     url = f"{API_BASE_URL}/invoices/estimate/number/generate"
     
     params = {

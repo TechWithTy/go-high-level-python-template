@@ -5,17 +5,20 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def preview_estimate_template(
-    access_token: str,
+    headers: Dict[str, str],
     alt_id: str,
     template_id: str,
     alt_type: str = "location"
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/invoices/estimate/template/preview"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION)
     }
     
     params = {
@@ -25,6 +28,6 @@ async def preview_estimate_template(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
         response.raise_for_status()
         return response.json()

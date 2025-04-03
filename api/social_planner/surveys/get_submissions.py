@@ -1,11 +1,12 @@
 from typing import Dict, Any, Optional
 import httpx
+import logging
 
 API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def get_survey_submissions(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     end_at: Optional[str] = None,
     limit: int = 20,
@@ -16,10 +17,13 @@ async def get_survey_submissions(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/surveys/submissions"
     
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION)
     }
     
     params = {
@@ -38,7 +42,7 @@ async def get_survey_submissions(
         params["surveyId"] = survey_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        response = await client.get(url, headers=request_headers, params=params)
     
     response.raise_for_status()
     return response.json()

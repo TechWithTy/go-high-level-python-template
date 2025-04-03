@@ -8,7 +8,7 @@ API_VERSION = "2021-07-28"
 async def update_tag(
     location_id: str,
     tag_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     name: str
 ) -> Dict[str, Any]:
     """
@@ -17,18 +17,24 @@ async def update_tag(
     Args:
         location_id: The ID of the location
         tag_id: The ID of the tag to update
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
         name: The new name for the tag
 
     Returns:
         Dictionary containing the updated tag data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -41,7 +47,7 @@ async def update_tag(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.put(url, headers=headers, json=data)
+            response = await client.put(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

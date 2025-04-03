@@ -6,7 +6,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-04-15"
 
 async def disable_saas_for_locations(
-    access_token: str,
+    headers: Dict[str, str],
     company_id: str,
     location_ids: List[str]
 ) -> Dict[str, Any]:
@@ -14,19 +14,25 @@ async def disable_saas_for_locations(
     Disable SaaS for locations for given locationIds.
 
     Args:
-        access_token: Access Token for authentication
+        headers: Dictionary containing Authorization and Version headers
         company_id: The company ID
         location_ids: List of location IDs to disable SaaS for
 
     Returns:
         Dict containing the API response
+
+    Raises:
+        Exception: If the Authorization header is missing or invalid
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
     url = f"{API_BASE_URL}/saas-api/public-api/bulk-disable-saas/{company_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    request_headers = {
+        "Authorization": headers["Authorization"],
         "Content-Type": "application/json",
-        "Version": API_VERSION,
+        "Version": headers.get("Version", API_VERSION),
         "channel": "OAUTH",
         "source": "INTEGRATION"
     }
@@ -34,6 +40,6 @@ async def disable_saas_for_locations(
     data = {"locationIds": location_ids}
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=data)
+        response = await client.post(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

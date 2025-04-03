@@ -7,7 +7,7 @@ API_VERSION = "2021-07-28"
 
 async def create_task(
     contact_id: str,
-    auth_token: str,
+    headers: Dict[str, str],
     title: str,
     due_date: str,
     completed: bool,
@@ -19,7 +19,7 @@ async def create_task(
     
     Args:
         contact_id: ID of the contact
-        auth_token: Bearer token for authentication
+        headers: Dictionary containing Authorization and Version headers
         title: Title of the task
         due_date: Due date in ISO format (e.g. "2020-10-25T11:00:00Z")
         completed: Whether the task is completed
@@ -29,9 +29,15 @@ async def create_task(
     Returns:
         Dict containing the created task data
     """
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json"
     }
     
@@ -52,7 +58,7 @@ async def create_task(
             response = await client.post(
                 f"{API_BASE_URL}/contacts/{contact_id}/tasks",
                 json=payload,
-                headers=headers
+                headers=request_headers
             )
             response.raise_for_status()
             return response.json()

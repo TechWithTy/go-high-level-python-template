@@ -10,7 +10,7 @@ async def update_redirect_by_id(
     target: str,
     action: str,
     location_id: str,
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Update an existing URL redirect in the system.
@@ -20,22 +20,25 @@ async def update_redirect_by_id(
         target: Target URL to which the original path will be redirected
         action: Action performed by the redirect (funnel, website, url, all)
         location_id: Identifier of the location associated with the redirect
-        access_token: Access token for authentication
+        headers: Dictionary containing request headers including Authorization
 
     Returns:
         Dictionary containing details of the updated redirect
 
     Raises:
         httpx.HTTPStatusError: If the API request fails
+        ValueError: If Authorization header is missing or invalid
     """
     url = f"{API_BASE_URL}/funnels/lookup/redirect/{redirect_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    headers.update({
         "Version": API_VERSION,
         "Accept": "application/json",
         "Content-Type": "application/json"
-    }
+    })
 
     data = {
         "target": target,

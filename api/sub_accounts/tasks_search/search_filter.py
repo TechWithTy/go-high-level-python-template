@@ -6,7 +6,7 @@ API_VERSION = "2021-07-28"
 
 async def search_tasks(
     location_id: str,
-    access_token: str,
+    headers: Dict[str, str],
     contact_ids: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     assigned_to: Optional[List[str]] = None,
@@ -17,9 +17,12 @@ async def search_tasks(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/locations/{location_id}/tasks/search"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers.get("Version", API_VERSION),
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -41,6 +44,6 @@ async def search_tasks(
         payload["businessId"] = business_id
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(url, headers=request_headers, json=payload)
         response.raise_for_status()
         return response.json()

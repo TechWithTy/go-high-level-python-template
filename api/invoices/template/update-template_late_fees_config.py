@@ -9,15 +9,18 @@ async def update_template_late_fees_config(
     alt_id: str,
     alt_type: str,
     late_fees_config: Dict[str, Any],
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/invoices/template/{template_id}/late-fees-configuration"
     
-    headers = {
+    if "Authorization" not in headers or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+    
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION),
+        **headers
     }
     
     payload = {
@@ -27,6 +30,6 @@ async def update_template_late_fees_config(
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.patch(url, json=payload, headers=headers)
+        response = await client.patch(url, json=payload, headers=request_headers)
         response.raise_for_status()
         return response.json()

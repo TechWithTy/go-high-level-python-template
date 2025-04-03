@@ -9,7 +9,7 @@ async def update_link(
     link_id: str,
     name: str,
     redirect_to: str,
-    access_token: str
+    headers: Dict[str, str]
 ) -> Dict[str, Any]:
     """
     Update a link in Go High Level.
@@ -18,19 +18,25 @@ async def update_link(
         link_id: The ID of the link to update
         name: New name for the link
         redirect_to: New redirect URL for the link
-        access_token: The access token for authentication
+        headers: Dictionary containing Authorization and Version headers
 
     Returns:
         Dictionary containing the updated link data
 
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
     url = f"{API_BASE_URL}/links/{link_id}"
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Version": API_VERSION,
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -41,7 +47,7 @@ async def update_link(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.put(url, headers=headers, json=data)
+        response = await client.put(url, headers=request_headers, json=data)
 
         if response.status_code != 201:
             logging.error(f"Failed to update link: {response.text}")

@@ -5,7 +5,7 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def attach_instagram_professional_account(
-    access_token: str,
+    headers: Dict[str, str],
     location_id: str,
     account_id: str,
     origin_id: str,
@@ -16,11 +16,14 @@ async def attach_instagram_professional_account(
 ) -> Dict[str, Any]:
     url = f"{API_BASE_URL}/social-media-posting/oauth/{location_id}/instagram/accounts/{account_id}"
 
-    headers = {
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    request_headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
-        "Version": API_VERSION
+        "Version": headers.get("Version", API_VERSION),
+        **headers
     }
 
     data = {
@@ -32,6 +35,6 @@ async def attach_instagram_professional_account(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=data)
+        response = await client.post(url, headers=request_headers, json=data)
         response.raise_for_status()
         return response.json()

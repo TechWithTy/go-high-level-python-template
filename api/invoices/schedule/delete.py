@@ -26,15 +26,15 @@ async def delete_invoice_schedule(
     Raises:
         Exception: If the API request fails or if required headers are missing
     """
-    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+    auth_token = headers.get("Authorization")
+    if not auth_token or not auth_token.startswith("Bearer "):
         raise Exception("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
 
-    if not headers.get("Version"):
-        headers["Version"] = API_VERSION
+    version = headers.get("Version", API_VERSION)
 
     request_headers = {
-        "Authorization": headers["Authorization"],
-        "Version": headers["Version"],
+        "Authorization": auth_token,
+        "Version": version,
         "Accept": "application/json"
     }
 

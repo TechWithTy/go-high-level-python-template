@@ -1,26 +1,47 @@
-import requests
-import json
+from typing import Dict, Any
+import httpx
+import logging
 
-def create_contact(auth_token, version="2021-07-28", **contact_data):
+API_BASE_URL = "https://services.leadconnectorhq.com"
+API_VERSION = "2021-07-28"
+
+async def create_contact(headers: Dict[str, str], **contact_data: Any) -> Dict[str, Any]:
     """
     Create a contact in Go High Level
-    
+
     Args:
-        auth_token (str): Authorization token
-        version (str): API version, defaults to "2021-07-28"
+        headers (Dict[str, str]): Request headers including Authorization
         **contact_data: Contact data fields (firstName, lastName, etc.)
-    
+
     Returns:
-        dict: API response
+        Dict[str, Any]: API response
+
+    Raises:
+        ValueError: If Authorization header is missing or invalid
+        Exception: If the API request fails
     """
-    url = "https://services.leadconnectorhq.com/contacts/"
-    
-    headers = {
-        "Accept": "application/json",
-        "Authorization": f"Bearer {auth_token}",
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
-        "Version": version
+        "Accept": "application/json"
     }
-    
-    response = requests.post(url, headers=headers, json=contact_data)
-    return response.json()  
+
+    url = f"{API_BASE_URL}/contacts/"
+
+    logging.info(f"Creating contact with data: {contact_data}")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=request_headers, json=contact_data)
+
+    if response.status_code != 200:
+        logging.error(f"Failed to create contact. Status: {response.status_code}, Response: {response.text}")
+        raise Exception(f"API request failed with status {response.status_code}: {response.text}")
+
+    return response.json()

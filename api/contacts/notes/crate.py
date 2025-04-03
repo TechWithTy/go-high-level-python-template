@@ -6,31 +6,37 @@ API_BASE_URL = "https://services.leadconnectorhq.com"
 API_VERSION = "2021-07-28"
 
 async def create_note(
-    token: str,
     contact_id: str,
     body: str,
+    headers: Dict[str, str],
     user_id: str = None
 ) -> Dict[str, Any]:
     """
     Create a note for a contact in Go High Level.
     
     Args:
-        token: Authentication token
         contact_id: The ID of the contact to add the note to
         body: The content of the note
+        headers: Dictionary containing Authorization and Version headers
         user_id: Optional user ID associated with the note
         
     Returns:
         Dictionary containing the created note data
         
     Raises:
-        Exception: If the API request fails
+        Exception: If the API request fails or if required headers are missing
     """
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+
+    if not headers.get("Version"):
+        headers["Version"] = API_VERSION
+
     url = f"{API_BASE_URL}/contacts/{contact_id}/notes"
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Version": API_VERSION,
+    request_headers = {
+        "Authorization": headers["Authorization"],
+        "Version": headers["Version"],
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
@@ -45,7 +51,7 @@ async def create_note(
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 url,
-                headers=headers,
+                headers=request_headers,
                 json=payload
             )
             

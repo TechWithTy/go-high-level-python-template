@@ -1,10 +1,9 @@
-import requests
+import httpx
 from typing import Dict, List, Optional
 from datetime import datetime
 
-def create_invoice_schedule(
-    auth_token: str,
-    version: str,
+async def create_invoice_schedule(
+    headers: Dict[str, str],
     alt_id: str,
     alt_type: str,
     name: str,
@@ -26,10 +25,11 @@ def create_invoice_schedule(
 ) -> Dict:
     url = "https://services.leadconnectorhq.com/invoices/schedule"
     
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Version": version
-    }
+    if not headers.get("Authorization") or not headers["Authorization"].startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header. Must be in format: 'Bearer {token}'")
+    
+    if not headers.get("Version"):
+        raise ValueError("Missing Version header")
     
     payload = {
         "altId": alt_id,
@@ -54,7 +54,8 @@ def create_invoice_schedule(
     if attachments:
         payload["attachments"] = attachments
     
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+        response.raise_for_status()
     
     return response.json()
